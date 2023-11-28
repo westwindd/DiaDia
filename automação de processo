@@ -1,0 +1,354 @@
+const puppeteer = require('puppeteer');
+const { log } = require('util');
+(async () => {
+  try {
+    const arr = []
+    const login = async (page) => {
+      console.log('inicio')
+      await page.setUserAgent('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36')
+      await page.goto('https://credenciado.amil.com.br', {
+        waitUntil: 'domcontentloaded',
+        timeout: 300000
+      });
+      await new Promise(resolve => setTimeout(resolve, 6000));
+      const usernameSelector = 'input[formcontrolname="username"]';
+      await page.waitForSelector(usernameSelector, { timeout: 120000 });
+      await page.type(usernameSelector, {{variable2}});
+      const passwordSelector = 'input[formcontrolname="password"]';
+      await page.waitForSelector(passwordSelector, { timeout: 50000 });
+      await page.type(passwordSelector, {{varable1}});
+      const finalizarButtonSelector = '#finalizar-walktour';
+      await page.waitForSelector(finalizarButtonSelector, { timeout: 50000 });
+      await page.click(finalizarButtonSelector);
+      const entrarButtonSelector = '.btn-login';
+      await page.waitForSelector(entrarButtonSelector, { timeout: 50000 });
+      await page.click(entrarButtonSelector);
+      await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 0 });
+    };
+    const navigateToPage = async (page) => {
+      try {
+        const desiredPageUrl = 'https://credenciado.amil.com.br/contas-medicas';
+        await page.goto(desiredPageUrl, {
+          waitUntil: 'domcontentloaded',
+          timeout: 120000,
+        });
+
+        console.log('Navigated to the desired page.');
+
+        await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 300000 });
+
+        const finalizarButtonSelector = '#finalizar-walktour';
+        await page.waitForSelector(finalizarButtonSelector, { timeout: 300000 });
+        await page.click(finalizarButtonSelector);
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        console.log('Clicked on the "finalizar" button.');
+
+        await page.keyboard.press('Enter');
+
+        const inputSelector = 'input#identificador';
+        const textToInsert = '084319768';
+        await new Promise(resolve => setTimeout(resolve, 6000));
+        await page.waitForSelector(inputSelector);
+        await page.click(inputSelector);
+        await page.type(inputSelector, textToInsert);
+
+        console.log('Inserted text into the input field.');
+
+        await page.keyboard.press('Enter');
+        await new Promise(resolve => setTimeout(resolve, 6000));
+        console.log('Pressed "Enter".');
+        const countLabelSelector = 'label[for="NAO_DIGITADO"]';
+        const radioButtonSelector = 'input[name="status"][value="NAO_DIGITADO"]';
+        await page.waitForSelector(radioButtonSelector);
+        await page.click(radioButtonSelector);
+        await page.waitForSelector(countLabelSelector, { timeout: 300000 });
+        const countLabelText = await page.$eval(countLabelSelector, (label) => label.textContent);
+        console.log(countLabelText);
+        const countNumber = (countLabelText.match(/\((\d+)\)/) || [])[1];
+        console.log('Number inside parentheses:', countNumber);
+        const pesquisarButtonSelector = 'button[type="submit"][value="filtrar"]';
+        const closeCookieBannerSelector = 'button.onetrust-close-btn-handler[aria-label="Fechar"]';
+        await page.waitForSelector(closeCookieBannerSelector);
+        await page.click(closeCookieBannerSelector);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await page.waitForSelector(pesquisarButtonSelector, { timeout: 50000 });
+        await page.click(pesquisarButtonSelector);
+
+      } catch (error) {
+        console.error('An error occurred:', error);
+      }
+    };
+
+    const interactWithForm = async (page) => {
+      const inputSelector = 'input[placeholder="Digite o nome ou código do prestador. Caso não encontre, adicione um novo."]';
+      await page.waitForSelector(inputSelector);
+      const inputValueDoc = await page.$eval(inputSelector, (input) => input.value);
+      const nameDoc = inputValueDoc.split("-")[0];
+      console.log(nameDoc);
+
+      const inputFieldSelector = '#digite-o-nome-ou-código-do-procedimento-\\/-materiais-\\/-medicamentos-\\/-outras-despesas';
+      await page.waitForSelector(inputFieldSelector);
+      await page.click(inputFieldSelector);
+
+      const selectedText = await page.evaluate(() => {
+        const selectElement = document.getElementById('regime-atendimento');
+        const selectedOption = selectElement ? selectElement.options[selectElement.selectedIndex] : null;
+        return selectedOption ? selectedOption.textContent.trim() : null;
+      });
+
+      console.log('Selected text:', selectedText);
+      let stringProcedimento = "60101067"
+      if (selectedText != "TELESSAÚDE") {
+        stringProcedimento = "10101012"
+      }
+      const inputValue = await page.$eval(inputFieldSelector, (input) => input.value);
+      console.log(inputValue)
+      const codProcedimento = stringProcedimento;
+      const modifiedValue = codProcedimento + ' -';
+
+      await page.type(inputFieldSelector, modifiedValue, { delay: 100 });
+      await page.waitForTimeout(1000);
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Enter');
+      await new Promise(resolve => setTimeout(resolve, 3500));
+
+
+      const addButtonSelector = 'button[touranchor="tour4filtro"]';
+      const dateSelect = 'input[asdatemaskdirective="unmask"][formcontrolname="dataSolicitacao"]';
+      await page.waitForSelector(dateSelect);
+      const date = await page.$eval(dateSelect, (input) => input.value);
+
+      const itemDataSelector = 'input[asdatemaskdirective="unmask"][formcontrolname="itemData"]';
+      await page.waitForSelector(itemDataSelector);
+
+      async function typeDateWithoutSlash(selector, text) {
+        const inputElement = await page.$(selector);
+        for (let i = 0; i < text.length; i++) {
+          const char = text.charAt(i);
+          if (char !== '/') {
+            await inputElement.type(char, { delay: 100 }); 
+          }
+        }
+      }
+      
+      await typeDateWithoutSlash(itemDataSelector, date);
+      await new Promise(resolve => setTimeout(resolve, 3500));
+      
+      console.log('Content of the input field after modification:', await page.$eval(itemDataSelector, (input) => input.value));
+      await page.waitForSelector(addButtonSelector);
+      await page.click(addButtonSelector);
+      await new Promise(resolve => setTimeout(resolve, 6000));
+
+      const professionals = [];
+      const tableRowsSelector = '.profissional-procedimento tbody tr';
+      const nextPageButtonSelector = '.paginacao .proximo';
+      const totalPagesSelector = '.paginacao ul li a';
+
+      const totalPages = await page.$$eval(totalPagesSelector, (pages) => {
+        return Math.max(...pages.map((page) => parseInt(page.textContent.trim()) || 0));
+      });
+
+      console.log(totalPages)
+      let aux = 1
+      let foundMatch = false;
+      let doc = {};
+      do {
+        const tableRows = await page.$$(tableRowsSelector);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        if (!tableRows || tableRows.length === 0) {
+          console.error('Table rows not found');
+          return;
+        }
+
+        for (const row of tableRows) {
+          const columns = await row.$$('td');
+
+          const name = await columns[1].evaluate((column) => column.textContent.trim());
+          const codOperadoraCPF = await columns[2].evaluate((column) => column.textContent.trim());
+          const conselhoNumero = await columns[3].evaluate((column) => column.textContent.trim());
+          const cbo = await columns[4].evaluate((column) => column.textContent.trim());
+          const grauParticipacao = await columns[5].evaluate((column) => column.textContent.trim());
+
+          const professional = {
+            name,
+            codOperadoraCPF,
+            conselhoNumero,
+            cbo,
+            grauParticipacao,
+          };
+
+          professionals.push(professional);
+
+          if (name.toLowerCase() === nameDoc.toLowerCase()) {
+            console.log(`Found information for ${nameDoc}:`, professional);
+            const checkboxSelector = `input#profissional-4`;
+            await page.waitForSelector(checkboxSelector, { timeout: 10000 });
+
+            await page.click(checkboxSelector);
+            console.log(`Checked the checkbox for ${nameDoc}`);
+            doc = professional;
+
+            break;
+          }
+        }
+
+        aux++;
+        const nextPageButton = await page.$(nextPageButtonSelector);
+        if (nextPageButton) {
+          await nextPageButton.click();
+          await page.waitForTimeout(3000);
+          console.log("click");
+        } else {
+          break;
+        }
+      } while (aux < totalPages);
+
+      console.log('Final information for', nameDoc, ':', doc);
+      const backButtonSelector = 'button.voltar';
+      await page.waitForSelector(backButtonSelector);
+      await new Promise(resolve => setTimeout(resolve, 6000));
+      await page.click(backButtonSelector);
+      await new Promise(resolve => setTimeout(resolve, 3500));
+      const addButtonXPath = '//button[text()="Adicionar item"]';
+
+await page.waitForXPath(addButtonXPath);
+const addButton = await page.$x(addButtonXPath);
+
+if (addButton.length > 0) {
+  await addButton[0].click();
+} else {
+  console.error('Button not found');
+}
+      console.log('Before clicking "Editar" button');
+      const cardConfigElement = await page.waitForSelector('.card-config [for="CBO-S"]', { timeout: 5000 });
+
+      // Check if the parent <div class="card-config"> is found
+      const asCbosAutocompleteElement = await page.waitForSelector('.card-config [controlname="cbos"]', { timeout: 5000 });
+
+      const enabledInputFieldSelector = 'button[type="button"][value="editar"]';
+      const editarButtonSelector = 'input[aria-autocomplete="inline"][role="combobox"].ng-untouched.ng-pristine.ng-valid';
+      
+      await asCbosAutocompleteElement.waitForSelector(enabledInputFieldSelector);
+      
+      const enabledInputField = await asCbosAutocompleteElement.$(enabledInputFieldSelector);
+      
+      if (enabledInputField) {
+        console.log('The input field exists.');
+      
+        // Check if the input field is disabled
+        const isDisabled = await asCbosAutocompleteElement.$eval(enabledInputFieldSelector, input => input.hasAttribute('disabled'));
+      
+        if (!isDisabled) {
+          await enabledInputField.click(); // Click on the input field, if needed
+          await enabledInputField.type(doc.cbo || '225130');
+        } else {
+          console.log('Input field is disabled');
+      
+          // Click on the "Editar" button
+          const editarButton = await page.$(editarButtonSelector);
+          if (editarButton) {
+            await editarButton.click();
+      
+            // Input the same value as if it's not disabled
+            await page.waitForTimeout(1000); // Add a delay if needed
+            await enabledInputField.type(doc.cbo || '225130');
+          } else {
+            console.error('Editar button not found');
+          }
+        }
+      } else {
+        console.error('Input field is not found');
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 6000));
+
+      console.log("BOTÃO DE INCLUSÃO ANTES")
+      const atualizarButtonSelector = 'button[value="incluir"]';
+      await page.waitForSelector(atualizarButtonSelector, { timeout: 5000 });
+      
+      const atualizarButton = await page.$(atualizarButtonSelector);
+      console.log("BOTÃO DE INCLUSÃO ENCONTRA")
+      if (atualizarButton) {
+        await page.evaluate(element => element.click(), atualizarButton); // Use evaluate to click the button
+        await page.waitForTimeout(3000);
+        console.log("BOTÃO DE INCLUSÃO CLICA")
+      } else {
+        console.error('Atualizar button not found');
+      }
+      
+      console.log("fim");
+    };
+
+
+    const browser = await puppeteer.launch({
+      headless: false,
+      args: ['--disable-gpu',
+        '--disable-setuid-sandbox',
+        '--no-sandbox',
+        '--disable-gl-drawing-for-tests'],
+      timeout: 120000
+    });
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1920, height: 1080 });
+    await login(page);
+    await navigateToPage(page);
+    const tableSelector = 'table.resultado-guia-tabela';
+    await page.waitForSelector(tableSelector);
+    const rows = await page.$$('tbody tr');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    for (const row of rows) {
+      const htmlContent = await row.evaluate(row => row.innerHTML);
+      console.log(htmlContent);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      const editarButtonSelector = 'button.editar';
+      try {
+        console.log('Before clicking "Editar" button');
+        await page.evaluate((editarButtonSelector) => {
+          const button = document.querySelector(editarButtonSelector);
+          if (button && !button.disabled && !button.hidden) {
+            button.click();
+          } else {
+            throw new Error('Button is not clickable');
+          }
+        }, editarButtonSelector);
+        console.log('After clicking "Editar" button');
+        const finalizarButtonSelector = 'button[aria-label="Finalizar"][id="finalizar-walktour"]';
+        if (arr.length < 1) {
+          try {
+            console.log('Before clicking "Finalizar" button');
+            await page.waitForSelector(finalizarButtonSelector);
+            await page.click(finalizarButtonSelector);
+            arr.push("a")
+            console.log('After clicking "Finalizar" button');
+          } catch (error) {
+            console.error('Error clicking "Finalizar" button:', error);
+          }
+        }
+        const buttonSelector = 'ul.informacoes-solicitantes button';
+        try {
+          await page.waitForSelector(buttonSelector);
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          const buttonTextBeforeClick = await page.evaluate(selector => {
+            const button = document.querySelector(selector);
+            return button ? button.textContent.trim() : null;
+          }, buttonSelector);
+          await page.waitForSelector('#sadt-endereco');
+          await page.select('#sadt-endereco', '2: Object');
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      } catch (error) {
+        console.error('Error clicking "Editar" button:', error);
+      }
+      await interactWithForm(page);
+      await page.goBack();
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      await page.waitForSelector(tableSelector);
+      break
+    }
+  } catch (error) {
+    console.error('Error:', error);
+  } finally {
+    //await browser.close();
+  }
+})();
